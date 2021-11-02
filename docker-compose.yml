@@ -1,0 +1,41 @@
+version: '3'
+
+services:
+  database:
+    image: postgres
+    container_name: demo-database
+    environment:
+      POSTGRES_DB: demo
+      POSTGRES_PASSWORD: demo
+      POSTGRES_USER: demo
+    volumes:
+      - ./.docker/pgsql/schema.sql:/docker-entrypoint-initdb.d/init.sql
+      - db-data:/var/lib/postgresql/data:rw
+    ports:
+      - "5432:5432"
+
+  fpm:
+    build:
+      context: ./.docker/fpm
+    container_name: demo-fpm
+    restart: always
+    links:
+      - database:database
+    volumes:
+      - ./:/var/www
+      - ./.docker/fpm/conf.d/www.conf:/usr/local/etc/php-fpm.d/www.conf
+    env_file:
+      - .env
+
+  nginx:
+    image: nginx:1.19.8
+    container_name: demo-proxy
+    ports:
+      - 80:80
+    volumes:
+      - ./.docker/nginx/hosts/demo.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./.docker/nginx/conf/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./:/var/www
+
+volumes:
+  db-data:
